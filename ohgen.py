@@ -7,6 +7,7 @@ import os
 from jinja2 import Template
 import re
 import yaml
+import argparse
 
 templates = {}
 settings = {}
@@ -16,6 +17,42 @@ base_path = ''
 def warn(msg):
     print("# [WARNING] " + msg)
 
+# From http://code.activestate.com/recipes/577058/
+def query_yes_no(question, default="yes"):
+    """Ask a yes/no question via raw_input() and return their answer.
+
+    "question" is a string that is presented to the user.
+    "default" is the presumed answer if the user just hits <Enter>.
+        It must be "yes" (the default), "no" or None (meaning
+        an answer is required of the user).
+
+    The "answer" return value is True for "yes" or False for "no".
+    """
+    valid = {"yes": True, "y": True, "no": False, "n": False}
+    if default is None:
+        prompt = " [y/n] "
+    elif default == "yes":
+        prompt = " [Y/n] "
+    elif default == "no":
+        prompt = " [y/N] "
+    else:
+        raise ValueError("invalid default answer: '%s'" % default)
+
+    while True:
+        sys.stdout.write(question + prompt)
+        try:
+            choice = input().lower()
+        except KeyboardInterrupt:
+            print()
+            sys.exit()
+        if default is not None and choice == '':
+            return valid[default]
+        elif choice in valid:
+            return valid[choice]
+        else:
+            sys.stdout.write("Please respond with 'yes' or 'no' (or 'y' or 'n').\n")
+
+                            
 # load template from file into the templates dict if not already loaded
 def load_template(template_name):
     global templates
@@ -60,7 +97,7 @@ def load_template(template_name):
     templates[template_name] = { 'things': things_template, 'items': items_template } 
 
 
-def camel_case_split(str):
+def split_camel_case(str):
     return " ".join(re.findall(r'[A-Z0-9](?:[a-z0-9]+|[A-Z]*(?=[A-Z]|$))', str))
 
 def get_template_name(thing):
@@ -97,17 +134,12 @@ def add_thing_to_buffer(thing, things_data, items_data):
     if not template_name: 
         return
 
-    try:
-        output_name = thing['output']
-    except:
-        try: 
-            output_name = settings['templates'][template_name]['output']
-        except:
-            try:
-                output_name = settings['output']
-            except:
-                warn("{}: No output name".format(thing['name']))
-                return
+    output_name = thing.get('output', None) \
+        or settings.get('templates', {}).get(template_name, {}).get('output', None) \
+        or settings.get('output', None)
+    if not output_name:
+        warn("{}: No output name".format(thing['name']))
+        return
 
     things_file = get_output_file(output_name, 'things-file')
     items_file = get_output_file(output_name, 'items-file')
@@ -124,7 +156,7 @@ def add_thing_to_buffer(thing, things_data, items_data):
     output_buffer[output_name].setdefault('things-file', []).append(things_data)
     output_buffer[output_name].setdefault('items-file', []).append(items_data)
 
-def save_output_buffer():
+def save_output_buffer(overwrite=False):
     # write output
     for output_name in output_buffer:
         for part in output_buffer[output_name]:
@@ -132,7 +164,12 @@ def save_output_buffer():
             file_name = os.path.join(base_path, file_name)
             headers = part + "-header"            
             footers = part + "-footer"
-            status = "updated" if os.path.isfile(file_name) else "created"
+            if os.path.isfile(file_name):
+                if not overwrite and not query_yes_no("File '{}' exists. Overwrite?".format(os.path.abspath(file_name))):
+                    continue
+                status = "updated"
+            else:
+                status = "created"
             with open(file_name, 'w') as file:
                 # write global headers
                 if 'header' in settings:
@@ -157,17 +194,25 @@ def save_output_buffer():
 
 def main():
     global settings
-    things_file_name = sys.argv[1] if len(sys.argv) > 1 else "devices.yaml"
-    base_path = os.path.dirname(things_file_name)
+
+    parser = argparse.ArgumentParser(description="OpenHAB Things and Items Generator")
+    parser.add_argument('-o', '--overwrite', action='store_true', 
+        help='Overwrite output files without prompting')
+    parser.add_argument('input', nargs='?', default='devices.yaml',
+        help='A file containing the list of things/items to generate. If not specified, a file called "device.yaml" will be loaded')
+    options = parser.parse_args()
+
+    devices_file_name = options.input
+    base_path = os.path.dirname(devices_file_name)
     try:
-        with open(things_file_name) as f:
+        with open(devices_file_name) as f:
             data = yaml.load(f.read(), Loader=yaml.BaseLoader)
     except:
         warn("{}".format(sys.exc_info()[1]))
         sys.exit()
 
     if not data:
-        warn("No data found in {}".format(things_file_name))       
+        warn("No data found in {}".format(devices_file_name))       
         sys.exit()
 
     settings = data.pop('settings', {})
@@ -176,16 +221,16 @@ def main():
     for name, thing in data.items():
         thing.setdefault('name', name)
         # fill in some useful variables
-        thing.setdefault('label', camel_case_split(name.replace("_", " ")))
+        thing.setdefault('label', split_camel_case(name.replace("_", " ")))
         thing.setdefault('thingid', name.replace("_", "-").lower())
         thing.setdefault('name_parts', name.split("_"))
-        thing.setdefault('room', camel_case_split(name.split("_")[0]))
+        thing.setdefault('room', split_camel_case(name.split("_")[0]))
 
         output = generate(name, thing)
         if output:
             add_thing_to_buffer(thing, output['things'], output['items'])
 
-    save_output_buffer()
+    save_output_buffer(options.overwrite)
 
 if __name__ == '__main__':
     main()
