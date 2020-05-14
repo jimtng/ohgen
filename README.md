@@ -31,6 +31,10 @@ To use a different file, specify it on the command line:
 ./ohgen.py fullexample.yaml
 ```
 
+By default, `ohgen` will prompt for confirmation if the output file already exists. To overwrite without prompting, specify `-o` or `--overwrite` in the command line, i.e.:
+```
+./ohgen.py -o
+```
 
 ## Config and Device List File: `devices.yaml`
 
