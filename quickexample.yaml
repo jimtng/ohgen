@@ -1,0 +1,20 @@
+settings:
+    output: default-output
+
+    outputs:
+      default-output:
+        # Full or relative path can be used, relative to devices.yaml file
+        things-file: ./example.things
+        items-file: ./example.items        
+    
+FrontPorch_Light:
+    template: tasmota-light-cct
+    groups: (gOutsideLights)
+
+Garage_Light:
+    template: tasmota-light
+
+BedRoom1_Light:
+    template: tasmota-light-cct
+    groups: (gInsideLights, gPresenceSimulators)
+
