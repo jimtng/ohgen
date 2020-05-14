@@ -84,9 +84,9 @@ A template can contain only Thing, or only Items, or both. Multiple Things, Brid
 Rules for Thing and Bridge definition in the template:
 - The opening brace must be at the end of the same line as `Thing` or `Bridge`
 - The closing brace must be on its own separate line
-- `Thing`s can be nested inside a `Bridge` observing the rules above
+- A `Thing` can be nested inside a `Bridge` observing the rules above
 
-Variables from `devices.yaml` for the device will be substituted in the template file. 
+Variables from `devices.yaml` for the device will be substituted in the template file. Each thing entry in the yaml file will be loaded as a dictionary, which can be used inside the template. For detailed information about the template syntax, see [Jinja2 Template Designer](https://jinja.palletsprojects.com/templates/).
 
 For more detailed examples, see the included templates in the sample-templates directory. Note that the included templates may change in the future. 
 
