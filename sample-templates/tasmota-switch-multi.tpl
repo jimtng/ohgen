@@ -1,7 +1,7 @@
 Thing mqtt:topic:mosquitto:{{thingid}} "{{label}}" (mqtt:broker:mosquitto) {
     Channels:
 {%- for item in switches:%}
-        Type switch : power{{loop.index}}    [ stateTopic="stat/{{thingid}}/RESULT", transformationPattern="JSONPATH:$.POWER{{loop.index}}", commandTopic="cmnd/{{thingid}}/POWER{{loop.index}}" ]
+        Type switch : power{{loop.index}}    [ stateTopic="stat/{{thingid}}/RESULT", transformationPattern="REGEX:(.*POWER{{loop.index}}.*)∩JSONPATH:$.POWER{{loop.index}}", commandTopic="cmnd/{{thingid}}/POWER{{loop.index}}" ]
 {%- endfor%}
         Type switch : reachable [ stateTopic="tele/{{thingid}}/LWT", on="Online", off="Offline" ]
         Type number : rssi      [ stateTopic="tele/{{thingid}}/STATE", transformationPattern="JSONPATH:$.Wifi.RSSI" ]
