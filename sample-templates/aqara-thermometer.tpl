@@ -8,9 +8,11 @@ Thing mqtt:topic:mosquitto:{{thingid}} "{{label}}" (mqtt:broker:mosquitto)  @ "E
         Type number : battery      [ stateTopic="zigbee/{{thingid}}/battery", unit="%" ]
 }
 
-Group g{{name_parts[0]}}_Temperature "{{room}} Temperature" { ga="Thermostat" }
-Number:Temperature {{name_parts[0]}}_Temperature "{{room}} Temperature" <temperature> (gTemperature, g{{name_parts[0]}}_Temperature)       { channel="mqtt:topic:mosquitto:{{thingid}}:temperature", expire="65m"{% for m in metadata: %}, {{m}}{% endfor %}, ga="thermostatTemperatureAmbient" }
-Number             {{name_parts[0]}}_Humidity    "{{room}} Humidity [%.1f%%]" <humidity> {{humidity_groups}} { channel="mqtt:topic:mosquitto:{{thingid}}:humidity" }
-Number             {{name_parts[0]}}_Pressure    "{{room}} Pressure"                                       { channel="mqtt:topic:mosquitto:{{thingid}}:pressure" }
-Number             {{name}}_Link          "{{label}} Link"             <network>  (gSignalStrength) { channel="mqtt:topic:mosquitto:{{thingid}}:linkquality" }
-Number             {{name}}_Battery       "{{label}} Battery [%d%%]"   <battery>  (gBatteries)      { channel="mqtt:topic:mosquitto:{{thingid}}:battery" }
+{%- set ga_group = 'g{}_Temperature'.format(name_parts[0]) -%}
+Group {{ga_group}} "{{room}} Temperature" { ga="Thermostat" }
+{%- set groups = ['gTemperature', ga_group] + groups|default([]) %}
+Number:Temperature {{name_parts[0]}}_Temperature         "{{room}} Temperature" <temperature> {{groups|groups}}{{tags|tags}} { channel="mqtt:topic:mosquitto:{{thingid}}:temperature", expire="65m", ga="thermostatTemperatureAmbient"{{metadata|metadata}} }
+Number             {{name_parts[0]}}_Humidity            "{{room}} Humidity [%.1f%%]" <humidity> {{ humidity_groups|groups }} { channel="mqtt:topic:mosquitto:{{thingid}}:humidity" }
+Number             {{name_parts[0]}}_Pressure            "{{room}} Pressure"                   { channel="mqtt:topic:mosquitto:{{thingid}}:pressure" }
+Number             {{name}}_Link    "{{label}} Link"             <network>  (gSignalStrength) { channel="mqtt:topic:mosquitto:{{thingid}}:linkquality" }
+Number             {{name}}_Battery "{{label}} Battery [%d%%]"   <battery>  (gBatteries)      { channel="mqtt:topic:mosquitto:{{thingid}}:battery" }
