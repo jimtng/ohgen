@@ -4,15 +4,75 @@
 
 import sys
 import os
-from jinja2 import Template
+from jinja2 import Environment, FileSystemLoader
 import re
 import yaml
 import argparse
 
+jinja_environment = None
 templates = {}
 settings = {}
 output_buffer = {}
 base_path = ''
+
+###############
+# Jinja Filters
+###############
+
+def csv(items, begin='', end='', enclosedby='', separator=', '):
+    def quote(value, enclosedby):
+        if enclosedby:
+            return enclosedby + value.replace(enclosedby, '\\' + enclosedby) + enclosedby
+        return value
+
+    if not items:
+        return ''
+    
+    if type(items) is str:
+        return ' ' + items
+
+    if type(items) is list:
+        if enclosedby:
+            items = [enclosedby + i.replace(enclosedby, '\\{}'.format(enclosedby)) + enclosedby for i in items]
+
+        return begin + separator.join(items) + end
+
+    raise ValueError("The first argument must be a string or a list")
+
+
+def openhab_groups(items):
+    return csv(items, begin=' (', end=')')
+
+def openhab_tags(items):
+    return csv(items, begin=' [', end=']', enclosedby='"')
+
+def openhab_metadata(items):
+    if type(items) is list:
+        for i, item in enumerate(items):
+            # print ('type: {}, item: {}'.format(type(item), item))
+            if type(item) is not dict:
+                continue
+            if item.get('key'):
+                items[i] = '{}="{}"'.format(item.get('key'), item.get('value'))
+                config_list = []
+                for config in item.get('configuration'):
+                    if type(config) is dict:
+                        for key, value in config.items():
+                            if value in ['true', 'false']:
+                                config_list.append('{}={}'.format(key, value))
+                            else:
+                                config_list.append('{}="{}"'.format(key, value))
+                    else:
+                        config_list.append(str(config))
+                items[i] += ' [ {} ]'.format(csv(config_list))
+            else:
+                item_list = []
+                for key, value in item.items():
+                    item_list.append('{}="{}"'.format(key, value))
+                items[i] = csv(item_list)
+
+
+    return csv(items, begin=", ")
 
 def warn(msg):
     print("# [WARNING] " + msg)
@@ -75,7 +135,7 @@ def load_template(template_name):
     with open(template_file_name) as template_file:
         for line in template_file:
             line_stripped = line.strip()
-            if line_stripped == '' or line_stripped.startswith('#'):
+            if line_stripped == '':
                 continue
             
             if line_stripped.startswith("Thing ") or line_stripped.startswith("Bridge "):
@@ -94,7 +154,16 @@ def load_template(template_name):
 
             items_template += line
 
-    templates[template_name] = { 'things': things_template, 'items': items_template } 
+    try:
+        templates[template_name] = { 
+            'filename': template_file_name, # to derive its path
+            'things': jinja_environment.from_string(things_template), 
+            'items': jinja_environment.from_string(items_template) 
+            # 'things': things_template, 
+            # 'items': items_template 
+        } 
+    except Exception as e:
+        warn('Failed loading template "{}": {}'.format(template_name, str(e)))
 
 
 def split_camel_case(str):
@@ -118,7 +187,7 @@ def generate(name, thing):
     generated = {}
     for part in [ 'things', 'items' ]:
         try:
-            generated[part] = Template(templates[template_name][part]).render(thing)
+            generated[part] = templates[template_name][part].render(thing)
         except:
             warn("Template error. Thing: '{}' Template: '{}' Error: {}".format(thing['name'], template_name, sys.exc_info()[1]))
             return None
@@ -137,6 +206,7 @@ def add_thing_to_buffer(thing, things_data, items_data):
     output_name = thing.get('output', None) \
         or settings.get('templates', {}).get(template_name, {}).get('output', None) \
         or settings.get('output', None)
+
     if not output_name:
         warn("{}: No output name".format(thing['name']))
         return
@@ -193,7 +263,7 @@ def save_output_buffer(overwrite=False):
             print("{} - {}".format(file_name, status))
 
 def main():
-    global settings
+    global settings, jinja_environment
 
     parser = argparse.ArgumentParser(description="OpenHAB Things and Items Generator")
     parser.add_argument('-o', '--overwrite', action='store_true', 
@@ -217,6 +287,10 @@ def main():
 
     settings = data.pop('settings', {})
 
+    # load jinja environment, set the loader path to dir(devices_file_name) + /templates
+    jinja_environment = Environment(loader=FileSystemLoader(os.path.join(base_path, 'templates')))
+    jinja_environment.filters.update({ 'csv': csv, 'groups': openhab_groups, 'tags': openhab_tags, 'metadata': openhab_metadata })
+
     # load all the yaml data first and generate each thing
     for name, thing in data.items():
         thing.setdefault('name', name)
@@ -231,6 +305,8 @@ def main():
             add_thing_to_buffer(thing, output['things'], output['items'])
 
     save_output_buffer(options.overwrite)
+
+    print("Devices: {}".format(len(data)))
 
 if __name__ == '__main__':
     main()
