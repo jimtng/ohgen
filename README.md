@@ -201,6 +201,10 @@ In addition to the [builtin filters from Jinja2](https://jinja.palletsprojects.c
   Number Item1 { style1a="value", style1b="value" [ config1="value1", config2="value2" ], style2="value", style3a="value3" [ config1="value1", config2="value2" ], style3b="value3" [ config1="value1", config2="value2" ] }
   ```
 
+- `quote` will enclose a non-empty value with double quotes. This is handy for labels.
+
+
+
 Note that the above constructs can also be created purely using Jinja2's loop and conditional statements. They are provided by `ohgen` for simplicity.
 
 ## Include and Macro

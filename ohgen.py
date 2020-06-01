@@ -19,12 +19,10 @@ base_path = ''
 # Jinja Filters
 ###############
 
-def csv(items, begin='', end='', enclosedby='', separator=', '):
-    def quote(value, enclosedby):
-        if enclosedby:
-            return enclosedby + value.replace(enclosedby, '\\' + enclosedby) + enclosedby
-        return value
+def quote(value, enclosedby='"'):
+    return enclosedby + value.replace(enclosedby, '\\' + enclosedby) + enclosedby if enclosedby and value else value
 
+def csv(items, begin='', end='', enclosedby='', separator=', '):
     if not items:
         return ''
     
@@ -33,7 +31,7 @@ def csv(items, begin='', end='', enclosedby='', separator=', '):
 
     if type(items) is list:
         if enclosedby:
-            items = [enclosedby + i.replace(enclosedby, '\\{}'.format(enclosedby)) + enclosedby for i in items]
+            items = [quote(i, enclosedby) for i in items]
 
         return begin + separator.join(items) + end
 
@@ -289,7 +287,7 @@ def main():
 
     # load jinja environment, set the loader path to dir(devices_file_name) + /templates
     jinja_environment = Environment(loader=FileSystemLoader(os.path.join(base_path, 'templates')))
-    jinja_environment.filters.update({ 'csv': csv, 'groups': openhab_groups, 'tags': openhab_tags, 'metadata': openhab_metadata })
+    jinja_environment.filters.update({ 'csv': csv, 'groups': openhab_groups, 'tags': openhab_tags, 'metadata': openhab_metadata, 'quote': quote })
 
     # load all the yaml data first and generate each thing
     for name, thing in data.items():

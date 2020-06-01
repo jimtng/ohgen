@@ -33,12 +33,12 @@ Thing mqtt:topic:mosquitto:{{thingid}} "{{label}}" (mqtt:broker:mosquitto) {
         {% set item_tags = item['tags']|default([]) -%}
         {% set groups = groups|default([]) -%}
         {% set tags = tags|default([]) -%}
-        Switch {{item['name']}} "{{item['label']}}" {{item['icon']|default('<switch>')}}{{ (groups+item_groups)|groups }}{{ (tags + item_tags)|tags }} { channel="mqtt:topic:mosquitto:{{thingid}}:power{{loop.index}}", autoupdate="false"{{ metadata|metadata }}{{ item['metadata']|metadata }} }
+        Switch {{item['name']}} {{item['label']|quote}} {{item['icon']|default('<switch>')}}{{ (groups+item_groups)|groups }}{{ (tags + item_tags)|tags }} { channel="mqtt:topic:mosquitto:{{thingid}}:power{{loop.index}}", autoupdate="false"{{ metadata|metadata }}{{ item['metadata']|metadata }} }
 {% else -%}
-        Switch {{name}}  "{{label}}" {{icon|default('<switch>')}}{{groups|groups}}{{tags|tags}} { channel="mqtt:topic:mosquitto:{{thingid}}:power", autoupdate="false"{{metadata|metadata}} }
+        Switch {{name}}  {{label|quote}} {{icon|default('<switch>')}}{{groups|groups}}{{tags|tags}} { channel="mqtt:topic:mosquitto:{{thingid}}:power", autoupdate="false"{{metadata|metadata}} }
 {% endfor %}
 {%- for item in buttons -%}
-        String {{item['name']}} "{{item['label']}}" {{ item['groups']|groups }}{{ item['tags']|tags }} { channel="mqtt:topic:mosquitto:{{thingid}}:button{{loop.index}}", autoupdate="false"{{ metadata|metadata }}{{ item['metadata']|metadata }} }
+        String {{item['name']}} {{item['label']|quote}} {{ item['groups']|groups }}{{ item['tags']|tags }} { channel="mqtt:topic:mosquitto:{{thingid}}:button{{loop.index}}", autoupdate="false"{{ metadata|metadata }}{{ item['metadata']|metadata }} }
 {% endfor -%}
 Number {{name}}_RSSI   "{{label}} RSSI [%d%%]"  <network> (gSignalStrength)  { channel="mqtt:topic:mosquitto:{{thingid}}:rssi" }
 String {{name}}_State	(gTasmotaState)                            { channel="mqtt:topic:mosquitto:{{thingid}}:state" }

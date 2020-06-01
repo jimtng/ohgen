@@ -16,7 +16,7 @@ Thing mqtt:topic:mosquitto:{{thingid}} "{{label}}" (mqtt:broker:mosquitto) {
 }
 
 Switch {{name}}_Power  "{{label}} Power" <light> {{groups|groups}}{{tags|tags}} { channel="mqtt:topic:mosquitto:{{thingid}}:power", autoupdate="false" }
-Dimmer {{name}}_Dimmer "{{label}}" { channel="mqtt:topic:mosquitto:{{thingid}}:dimmer"{{ metadata|metadata }} }
+Dimmer {{name}}_Dimmer {{label|quote}} { channel="mqtt:topic:mosquitto:{{thingid}}:dimmer"{{ metadata|metadata }} }
 {% if 'ct' in features -%}
 Dimmer {{name}}_CT     "{{label}} CT"            { channel="mqtt:topic:mosquitto:{{thingid}}:ct" }
 {% endif -%}
